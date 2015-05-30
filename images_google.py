@@ -18,30 +18,27 @@ def go(query):
     if not os.path.exists(BASE_PATH):
         os.makedirs(BASE_PATH)
     start = 0
-    while start < 1:
-        r = requests.get(BASE_URL % start)
-        image_info = json.loads(r.text)['responseData']['results'][0]
-        url = image_info['unescapedUrl']
-        try:
-            image_r = requests.get(url)
-        except ConnectionError, e:
-            print 'could not download %s' % url
-            continue
 
-        title = image_info['titleNoFormatting'].replace('/', '').replace('\\', '')
+    r = requests.get(BASE_URL % start)
+    image_info = json.loads(r.text)['responseData']['results'][0]
+    url = image_info['unescapedUrl']
+    try:
+        image_r = requests.get(url)
+    except ConnectionError, e:
+        print 'could not download %s' % url
 
-        file = open(os.path.join(BASE_PATH, '%s.jpg') % title, 'w')
-        try:
-            Image.open(StringIO(image_r.content)).save(file, 'JPGE')
-        except IOError, e:
+    title = query
 
-            print 'could not save %s' % url
-            continue
-        finally:
-            file.close()
-        start += 1
+    file = open(os.path.join(BASE_PATH, '%s.png') % title, 'w')
+    try:
+        Image.open(StringIO(image_r.content)).save(file, 'PNG')
+    except IOError, e:
 
-        time.sleep(1.5)
+        print 'could not save %s' % url
+    finally:
+        file.close()
+
+    time.sleep(1.5)
 
 def cambia_imagen():
     im = Image.open("imagen.jpg") #Can be many different formats.
@@ -55,13 +52,12 @@ def cambia_imagen():
 
     im.save('salida.jpg')
 
-    im2 = Image()
-    print im2
 
 def crea_imagen_blanca(x_tam, y_tam, nombre):
     white = (255,255,255)
     img = Image.new("RGB", [x_tam,y_tam], white)
     img.save(nombre)
+
 
 
 def get_tt():
@@ -93,11 +89,57 @@ def get_tt():
 
     return arreglo
 
-arreglo = get_tt()
+def get_lista_imagenes():
+    lista_imagenes_string = []
+    lista_imagenes = []
+    for file in os.listdir("MiNuevaCarpeta"):
+        if file.endswith(".png"):
+            lista_imagenes_string.append(str(file))
 
-for palabra in arreglo:
+    for string_imagen in lista_imagenes_string:
+        im = Image.open('MiNuevaCarpeta/' + string_imagen)
+        print im
+
+        lista_imagenes.append(im)
+
+    return lista_imagenes
+
+def junta_imagenes():
+    lista_matrices = []
+    lista_imagenes = get_lista_imagenes()
+
+    for imagen_obj in lista_imagenes:
+        lista_matrices.append(imagen_obj.load())
+
+    imagen_blanca = Image.open('imagen_blanca.png')
+    pix = imagen_blanca.load()
+    imagen_actual = 0
+
+    for i in range(imagen_blanca.size[0]):
+        for j in range(imagen_blanca.size[1]):
+
+            if i >= lista_imagenes[imagen_actual].size[0]:
+                break;
+            elif j >= lista_imagenes[imagen_actual].size[1]:
+                break;
+            else:
+                pix[i,j] = lista_matrices[imagen_actual][i,j]
+        
+        if i % 50 == 0:
+            imagen_actual = imagen_actual + 1
+            if imagen_actual == len(lista_imagenes) - 1:
+                imagen_actual = 0
+
+    imagen_blanca.save('salida.jpg')
+
+
+arreglo_tts = get_tt()
+
+for palabra in arreglo_tts:
     palabra=palabra.replace('#','')
+    palabra=palabra.replace(' ','')
     print palabra
     go(palabra)
 
-
+crea_imagen_blanca(1600,1600,'imagen_blanca.png')
+junta_imagenes()
